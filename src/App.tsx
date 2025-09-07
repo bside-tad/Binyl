@@ -48,6 +48,7 @@ const App: React.FC = () => {
     sparkles: Array<{ x: number; y: number; opacity: number; size: number }>;
   }>>([]);
   const [usedAlbumIds, setUsedAlbumIds] = useState<Set<number>>(new Set());
+  const [activeOverlayId, setActiveOverlayId] = useState<number | null>(null);
   const [leftUsedIds, setLeftUsedIds] = useState<Set<number>>(new Set());
   const [rightUsedIds, setRightUsedIds] = useState<Set<number>>(new Set());
 
@@ -193,12 +194,7 @@ const App: React.FC = () => {
         rotation: (Math.random() - 0.5) * 60, // Random rotation between -30 and 30 degrees
         scale: 0.6 + Math.random() * 0.8, // Scale between 0.6 and 1.4 (larger)
         speed: 0.8 + Math.random() * 2.2, // Speed between 0.8 and 3.0
-        sparkles: Array.from({ length: 4 + Math.floor(Math.random() * 6) }, () => ({
-          x: Math.random() * 100 - 50,
-          y: Math.random() * 100 - 50,
-          opacity: Math.random(),
-          size: 3 + Math.random() * 6
-        }))
+        sparkles: []
       };
     };
 
@@ -226,7 +222,7 @@ const App: React.FC = () => {
         setUsedAlbumIds(newUsedIds);
 
         // Add new albums more frequently for full-screen effect
-        if (Math.random() < 0.08 && updated.length < 12) {
+        if (Math.random() < 0.25 && updated.length < 50) {
           const newAlbum = createFullscreenScreensaverAlbum(newUsedIds);
           if (newAlbum) {
             updated.push(newAlbum);
@@ -461,56 +457,77 @@ const App: React.FC = () => {
             overflow: 'hidden',
           }}
         >
-          {/* Exit Button */}
-          <button
-            style={{
-              position: 'fixed',
-              top: 32,
-              right: 32,
-              background: 'rgba(255, 255, 255, 0.1)',
-              color: '#ffffff',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: '12px',
-              padding: '12px 24px',
-              fontSize: '16px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              zIndex: 5100,
-              backdropFilter: 'blur(20px)',
-              transition: 'all 0.2s ease',
-            }}
-            onClick={() => {
-              setShowFullscreenScreensaver(false);
-              setUsedAlbumIds(new Set());
-              setFullscreenScreensaverAlbums([]);
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-              e.currentTarget.style.transform = 'translateY(-2px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
-          >
-            Exit Screensaver
-          </button>
-          
-          {/* Title */}
-          <div
-            style={{
-              position: 'fixed',
-              top: 32,
-              left: 32,
-              color: '#ffffff',
-              fontSize: '24px',
-              fontWeight: '600',
-              zIndex: 5100,
-              textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
-            }}
-          >
-            {username}'s Collection Screensaver
+          {/* Control Buttons */}
+          <div style={{ position: 'fixed', top: 32, right: 32, display: 'flex', gap: '12px', zIndex: 5100 }}>
+            {/* Fullscreen Button */}
+            <button
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                color: '#ffffff',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: '12px',
+                padding: '12px 20px',
+                fontSize: '16px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                backdropFilter: 'blur(20px)',
+                transition: 'all 0.2s ease',
+              }}
+              onClick={() => {
+                if (!document.fullscreenElement) {
+                  document.documentElement.requestFullscreen();
+                } else {
+                  document.exitFullscreen();
+                }
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              {document.fullscreenElement ? 'Exit Fullscreen' : 'Fullscreen'}
+            </button>
+            
+            {/* Exit Button */}
+            <button
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                color: '#ffffff',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: '12px',
+                padding: '12px 24px',
+                fontSize: '16px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                backdropFilter: 'blur(20px)',
+                transition: 'all 0.2s ease',
+              }}
+              onClick={() => {
+                // Exit fullscreen if currently in fullscreen mode
+                if (document.fullscreenElement) {
+                  document.exitFullscreen();
+                }
+                setShowFullscreenScreensaver(false);
+                setUsedAlbumIds(new Set());
+                setFullscreenScreensaverAlbums([]);
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              Exit Screensaver
+            </button>
           </div>
+          
           
           {/* Full-screen Falling Albums */}
           {fullscreenScreensaverAlbums.map((album, index) => {
@@ -556,66 +573,8 @@ const App: React.FC = () => {
                   />
                   
                   {/* Enhanced Sparkle Trail */}
-                  {album.sparkles.map((sparkle, sparkleIndex) => (
-                    <div
-                      key={sparkleIndex}
-                      style={{
-                        position: 'absolute',
-                        left: `50%`,
-                        top: `50%`,
-                        transform: `translate(${sparkle.x}px, ${sparkle.y}px)`,
-                        width: `${sparkle.size}px`,
-                        height: `${sparkle.size}px`,
-                        background: `radial-gradient(circle, rgba(255, 255, 255, ${sparkle.opacity}) 0%, rgba(255, 255, 255, 0) 70%)`,
-                        borderRadius: '50%',
-                        pointerEvents: 'none',
-                        zIndex: 3,
-                        animation: `sparkle-twinkle ${1 + Math.random() * 2}s ease-in-out infinite`,
-                        animationDelay: `${Math.random() * 2}s`
-                      }}
-                    />
-                  ))}
                   
-                  {/* Blue Sparkles */}
-                  {album.sparkles.map((sparkle, sparkleIndex) => (
-                    <div
-                      key={`blue-${sparkleIndex}`}
-                      style={{
-                        position: 'absolute',
-                        left: `50%`,
-                        top: `50%`,
-                        transform: `translate(${sparkle.x + 30}px, ${sparkle.y + 30}px)`,
-                        width: `${sparkle.size * 0.7}px`,
-                        height: `${sparkle.size * 0.7}px`,
-                        background: `radial-gradient(circle, rgba(0, 122, 255, ${sparkle.opacity * 0.8}) 0%, rgba(0, 122, 255, 0) 70%)`,
-                        borderRadius: '50%',
-                        pointerEvents: 'none',
-                        zIndex: 3,
-                        animation: `sparkle-twinkle ${1.5 + Math.random() * 1.5}s ease-in-out infinite`,
-                        animationDelay: `${Math.random() * 1.5}s`
-                      }}
-                    />
-                  ))}
                   
-                  {/* Golden Sparkles */}
-                  {Array.from({ length: 4 }).map((_, extraSparkleIndex) => (
-                    <div
-                      key={`gold-${extraSparkleIndex}`}
-                      style={{
-                        position: 'absolute',
-                        left: `${15 + extraSparkleIndex * 20}%`,
-                        top: `${15 + extraSparkleIndex * 15}%`,
-                        width: `${4 + Math.random() * 5}px`,
-                        height: `${4 + Math.random() * 5}px`,
-                        background: `radial-gradient(circle, rgba(255, 215, 0, 0.9) 0%, rgba(255, 215, 0, 0) 70%)`,
-                        borderRadius: '50%',
-                        pointerEvents: 'none',
-                        zIndex: 3,
-                        animation: `sparkle-twinkle ${0.8 + Math.random() * 1.2}s ease-in-out infinite`,
-                        animationDelay: `${Math.random() * 1}s`
-                      }}
-                    />
-                  ))}
                 </div>
               </div>
             );
@@ -626,7 +585,6 @@ const App: React.FC = () => {
           {/* Header */}
           <div className="header">
             <h1>{username}'s Collection</h1>
-            <p>{records.length} albums in your collection</p>
           </div>
 
           {error && (
@@ -757,7 +715,7 @@ const App: React.FC = () => {
                 disabled={isExporting}
                 style={{
                   padding: '8px 16px',
-                  background: isExporting ? '#8e8e93' : '#34c759',
+                  background: isExporting ? '#8e8e93' : '#007aff',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '8px',
@@ -770,22 +728,6 @@ const App: React.FC = () => {
                 {isExporting ? 'Exporting...' : 'Export Collection'}
               </button>
 
-              <button
-                onClick={resetApp}
-                style={{
-                  padding: '8px 16px',
-                  background: '#ff3b30',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                Reset
-              </button>
             </div>
           </div>
           
@@ -802,8 +744,16 @@ const App: React.FC = () => {
               <RecordCard 
                 key={record.id} 
                 record={record}
+                playCount={playCounts[record.id.toString()] || 0}
+                onPlayCountUpdate={handlePlayCountUpdate}
+                currentRating={ratings[record.id.toString()] || 0}
+                onRatingUpdate={handleRatingUpdate}
+                currentNote={notes[record.id.toString()] || ''}
+                onNoteUpdate={handleNoteUpdate}
                 imageDataUrl={imageDataUrls[record.id]}
                 onImageLoad={(id, dataUrl) => setImageDataUrls(prev => ({ ...prev, [id]: dataUrl }))}
+                activeOverlayId={activeOverlayId}
+                onOverlayToggle={(id) => setActiveOverlayId(activeOverlayId === id ? null : id)}
               />
             ))}
           </div>
@@ -833,7 +783,7 @@ const App: React.FC = () => {
               top: 24,
               right: 24,
               zIndex: 3000,
-              background: '#34c759',
+              background: '#007aff',
               color: '#ffffff',
               border: 'none',
               borderRadius: '50%',
@@ -841,7 +791,7 @@ const App: React.FC = () => {
               height: '56px',
               fontSize: '24px',
               cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(52, 199, 89, 0.3)',
+              boxShadow: '0 4px 12px rgba(0, 122, 255, 0.3)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -851,13 +801,13 @@ const App: React.FC = () => {
             onClick={() => setShowFullscreenScreensaver(true)}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-2px) scale(1.1)';
-              e.currentTarget.style.background = '#30b04f';
-              e.currentTarget.style.boxShadow = '0 6px 16px rgba(52, 199, 89, 0.4)';
+              e.currentTarget.style.background = '#0056b3';
+              e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 122, 255, 0.4)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0) scale(1)';
-              e.currentTarget.style.background = '#34c759';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(52, 199, 89, 0.3)';
+              e.currentTarget.style.background = '#007aff';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 122, 255, 0.3)';
             }}
           >
             <span role="img" aria-label="Screensaver">✨</span>

@@ -22,9 +22,6 @@ const SearchBar: React.FC<SearchBarProps> = ({
         value={searchTerm}
         onChange={(e) => onSearchChange(e.target.value)}
       />
-      <div style={{ marginTop: '8px', fontSize: '0.85rem', color: '#666666', fontWeight: '500' }}>
-        Showing {filteredCount} of {totalRecords} records
-      </div>
     </div>
   );
 };

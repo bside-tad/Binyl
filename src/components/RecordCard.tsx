@@ -15,34 +15,40 @@ interface RecordCardProps {
   onShowOverlay?: () => void;
   onHideOverlay?: () => void;
   showRatingOverlay?: boolean;
+  activeOverlayId?: number | null;
+  onOverlayToggle?: (id: number) => void;
 }
 
-const RecordCard: React.FC<RecordCardProps> = ({ record, onPlayCountUpdate, playCount, onRatingUpdate, currentRating, onNoteUpdate, currentNote, exportMode, exportImageSrc, showOverlay, onShowOverlay, onHideOverlay, showRatingOverlay }) => {
+const RecordCard: React.FC<RecordCardProps> = ({ record, onPlayCountUpdate, playCount, onRatingUpdate, currentRating, onNoteUpdate, currentNote, exportMode, exportImageSrc, showOverlay, onShowOverlay, onHideOverlay, showRatingOverlay, activeOverlayId, onOverlayToggle }) => {
   const [clickCount, setClickCount] = useState(playCount);
-  const [isNeedleDropping, setIsNeedleDropping] = useState(false);
   const [localShowOverlay, setLocalShowOverlay] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [noteText, setNoteText] = useState(currentNote || '');
+  const [showFirstPlayPrompt, setShowFirstPlayPrompt] = useState(false);
 
   // Update local clickCount when global playCount changes
   useEffect(() => {
     setClickCount(playCount);
   }, [playCount]);
 
+
   const handleCardClick = () => {
     if (exportMode) return;
-    if (onShowOverlay) {
+    if (onOverlayToggle) {
+      onOverlayToggle(record.id);
+    } else if (onShowOverlay) {
       onShowOverlay();
     } else {
       setLocalShowOverlay(true);
     }
   };
 
-  const handleNeedleDropped = () => {
+  const handleJustPlayed = () => {
     const newCount = clickCount + 1;
+    
     setClickCount(newCount);
-    setIsNeedleDropping(true);
+    
     if (onHideOverlay) {
       onHideOverlay();
     } else {
@@ -52,14 +58,16 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, onPlayCountUpdate, play
     // Update the parent component with the new play count
     onPlayCountUpdate(record.id, newCount);
     
-    // Stop needle dropping animation after it completes
-    setTimeout(() => {
-      setIsNeedleDropping(false);
-    }, 2000);
+    // Only show the rating prompt if the album doesn't have a rating yet
+    if (!currentRating || currentRating === 0) {
+      setShowFirstPlayPrompt(true);
+    }
   };
 
   const handleCancel = () => {
-    if (onHideOverlay) {
+    if (onOverlayToggle) {
+      onOverlayToggle(record.id);
+    } else if (onHideOverlay) {
       onHideOverlay();
     } else {
       setLocalShowOverlay(false);
@@ -91,7 +99,9 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, onPlayCountUpdate, play
       onNoteUpdate(record.id, noteText);
     }
     setShowNoteModal(false);
-    if (onHideOverlay) {
+    if (onOverlayToggle) {
+      onOverlayToggle(record.id);
+    } else if (onHideOverlay) {
       onHideOverlay();
     } else {
       setLocalShowOverlay(false);
@@ -101,21 +111,34 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, onPlayCountUpdate, play
   const handleNoteCancel = () => {
     setShowNoteModal(false);
     // If note was prompted after rating, close the overlay
-    if (onHideOverlay) {
+    if (onOverlayToggle) {
+      onOverlayToggle(record.id);
+    } else if (onHideOverlay) {
       onHideOverlay();
     } else {
       setLocalShowOverlay(false);
     }
   };
 
+  const handleFirstPlayPromptRate = () => {
+    console.log('User chose to rate and add note');
+    setShowFirstPlayPrompt(false);
+    setShowRatingModal(true);
+  };
+
+  const handleFirstPlayPromptSkip = () => {
+    console.log('User chose to skip rating');
+    setShowFirstPlayPrompt(false);
+  };
+
   // Use exportImageSrc in export mode, otherwise use coverImage
   const imageSrc = exportMode && exportImageSrc ? exportImageSrc : (record.coverImage || '/placeholder-album.jpg');
 
-  const overlayVisible = typeof showOverlay === 'boolean' ? showOverlay : localShowOverlay;
+  const overlayVisible = typeof showOverlay === 'boolean' ? showOverlay : (activeOverlayId === record.id);
   return (
     <div className={`record-card${exportMode ? ' export-tile' : ''}`} onClick={handleCardClick}>
       {clickCount > 0 && !exportMode && (
-        <div className="click-counter">
+        <div className="play-count-badge">
           {clickCount}
         </div>
       )}
@@ -131,20 +154,13 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, onPlayCountUpdate, play
         </div>
       )}
       
-      {isNeedleDropping && (
-        <div className="record-player">
-          <div className="record-player-base"></div>
-          <div className="vinyl-record spinning"></div>
-          <div className="tonearm dropping"></div>
-        </div>
-      )}
       
       {overlayVisible && !exportMode && (
         <div className="record-overlay" onClick={(e) => e.stopPropagation()}>
           <div className="overlay-buttons">
             <button 
               className="overlay-btn needle-dropped"
-              onClick={handleNeedleDropped}
+              onClick={handleJustPlayed}
             >
               Just Played
             </button>
@@ -212,6 +228,30 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, onPlayCountUpdate, play
           </div>
         </div>
       )}
+
+      {showFirstPlayPrompt && !exportMode && (
+        <div className="first-play-prompt-overlay" onClick={(e) => e.stopPropagation()}>
+          <div className="first-play-prompt-modal">
+            <h3>🎵 Just Played!</h3>
+            <p>Would you like to rate "{record.title}" and add a note?</p>
+            <div className="first-play-buttons">
+              <button 
+                className="overlay-btn rate-btn"
+                onClick={handleFirstPlayPromptRate}
+              >
+                Rate & Add Note
+              </button>
+              <button 
+                className="overlay-btn cancel"
+                onClick={handleFirstPlayPromptSkip}
+              >
+                Maybe Later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {showRatingModal && !exportMode && (
         <div className="rating-modal-overlay" onClick={(e) => e.stopPropagation()}>
