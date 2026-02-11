@@ -137,6 +137,12 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, onPlayCountUpdate, play
   const overlayVisible = typeof showOverlay === 'boolean' ? showOverlay : (activeOverlayId === record.id);
   return (
     <div className={`record-card${exportMode ? ' export-tile' : ''}`} onClick={handleCardClick}>
+      {currentRating && currentRating > 0 && !exportMode ? (
+        <div className="rating-badge">
+          <span className="rating-star">★</span>
+          <span className="rating-number">{currentRating}</span>
+        </div>
+      ) : null}
       {clickCount > 0 && !exportMode && (
         <div className="play-count-badge">
           {clickCount}
@@ -257,7 +263,7 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, onPlayCountUpdate, play
         <div className="rating-modal-overlay" onClick={(e) => e.stopPropagation()}>
           <div className="rating-modal">
             <h3>{currentRating && currentRating > 0 ? 'Rerate' : 'Rate'} "{record.title}"</h3>
-            {currentRating && currentRating > 0 && (
+            {currentRating !== undefined && currentRating !== null && currentRating > 0 && (
               <div className="current-rating">
                 <span>Current Rating: </span>
                 <div className="current-rating-stars">
